@@ -26,8 +26,8 @@
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
         const scene = new THREE.Scene();
-        // Camera far plane increased to 500,000 to see the massive objects
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 10, 500000);
+        // Camera far plane increased to 1,000,000 to see these massive objects
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 10, 1000000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -35,22 +35,22 @@
         document.body.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
-        camera.position.set(0, 15000, 30000); // Backed out significantly
+        camera.position.set(0, 20000, 40000);
 
         // --- Extreme Lighting ---
-        scene.add(new THREE.AmbientLight(0xffffff, 8.0)); 
+        scene.add(new THREE.AmbientLight(0xffffff, 10.0)); 
         const light = new THREE.DirectionalLight(0xffffff, 5.0);
         light.position.set(10000, 10000, 10000);
         scene.add(light);
 
         // --- Massive Starfield ---
         const starCoords = [];
-        for(let i = 0; i < 25000; i++) {
-            starCoords.push((Math.random() - 0.5) * 200000, (Math.random() - 0.5) * 200000, (Math.random() - 0.5) * 200000);
+        for(let i = 0; i < 30000; i++) {
+            starCoords.push((Math.random() - 0.5) * 300000, (Math.random() - 0.5) * 300000, (Math.random() - 0.5) * 300000);
         }
         const starGeo = new THREE.BufferGeometry();
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 15, color: 0xffffff })));
+        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 20, color: 0xffffff })));
 
         // --- Planets ---
         const planets = [];
@@ -62,12 +62,11 @@
             scene.add(group);
             planets.push(group);
         };
-        // Planets are kept at their original scale for contrast
-        createPlanet(800, 0x2244ff, 8000, 0.001); 
-        createPlanet(600, 0xff5500, 12000, 0.0008); 
-        createPlanet(1000, 0x88cc88, 18000, 0.0005); 
+        createPlanet(800, 0x2244ff, 15000, 0.001); 
+        createPlanet(600, 0xff5500, 25000, 0.0008); 
+        createPlanet(1000, 0x88cc88, 35000, 0.0005); 
 
-        // --- The Colossal Alien ---
+        // --- The Colossal Alien Swarm ---
         let aliens = [];
         let mixers = [];
         const clock = new THREE.Clock();
@@ -76,16 +75,16 @@
         loader.load('./human1.glb', (gltf) => {
             const originalModel = gltf.scene;
             
-            // 1. PIVOT FIX: Calculate center and move geometry so it orbits correctly
+            // 1. PIVOT NORMALIZATION: Move geometry so its center is 0,0,0
             const box = new THREE.Box3().setFromObject(originalModel);
             const center = box.getCenter(new THREE.Vector3());
             const size = box.getSize(new THREE.Vector3());
             originalModel.position.set(-center.x, -center.y, -center.z);
 
-            // 2. COLOSSAL SCALE: Scaling to be 30,000 units tall
-            const scaleFactor = 30000 / Math.max(size.x, size.y, size.z); 
+            // 2. COLOSSAL SCALE: Scaling to be 80,000 units tall
+            const scaleFactor = 80000 / Math.max(size.x, size.y, size.z); 
 
-            for(let i = 0; i < 5; i++) {
+            for(let i = 0; i < 4; i++) {
                 const alienWrapper = new THREE.Group();
                 const alienClone = i === 0 ? originalModel : originalModel.clone();
                 alienWrapper.add(alienClone);
@@ -96,12 +95,12 @@
                 alienWrapper.userData = { 
                     targetPlanet, 
                     orbitAngle: Math.random() * 6.28, 
-                    orbitDist: 15000 + (Math.random() * 5000), // Huge orbit distance
-                    orbitSpeed: 0.002, // Majestic, slow movement
-                    yOffset: (Math.random() - 0.5) * 2000
+                    orbitDist: 30000 + (Math.random() * 10000), 
+                    orbitSpeed: 0.0015,
+                    yOffset: 0 // Orbiting perfectly on the center plane
                 };
 
-                // Animation Engine
+                // Animation Mixer for Clones
                 const mixer = new THREE.AnimationMixer(alienClone);
                 if (gltf.animations.length > 0) {
                     mixer.clipAction(gltf.animations[0]).play();
@@ -128,10 +127,10 @@
                 const p = a.userData.targetPlanet;
                 a.userData.orbitAngle += a.userData.orbitSpeed;
                 
-                // Position centered on the planet's plane
+                // Alignment fix: Locks the giant exactly to the planet's horizontal plane
                 a.position.set(
                     p.position.x + Math.cos(a.userData.orbitAngle) * a.userData.orbitDist,
-                    p.position.y + a.userData.yOffset, 
+                    p.position.y, 
                     p.position.z + Math.sin(a.userData.orbitAngle) * a.userData.orbitDist
                 );
                 
