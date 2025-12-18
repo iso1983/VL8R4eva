@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Floating Lava Universe - VL8R4eva</title>
+    <title>Lava Universe with Alien - VL8R4eva</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; }
         canvas { display: block; }
@@ -70,17 +70,15 @@
         controls.enableDamping = true;
         camera.position.set(0, 80000, 250000);
 
-        // --- ENVIRONMENT & LIGHTING ---
+        // --- Lighting ---
         const ambient = new THREE.AmbientLight(0xffffff, 0.15); 
         scene.add(ambient);
-        
-        // Point light attached to the planet later
         const lavaLight = new THREE.PointLight(0xff4400, 60, 1000000, 1.5);
 
-        // --- STARS ---
-        const starGeo = new THREE.BufferGeometry();
+        // --- Stars ---
         const starCoords = [];
         for(let i = 0; i < 30000; i++) starCoords.push((Math.random()-0.5)*2000000, (Math.random()-0.5)*2000000, (Math.random()-0.5)*2000000);
+        const starGeo = new THREE.BufferGeometry();
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
         scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 150, color: 0xffffff })));
 
@@ -88,13 +86,14 @@
         const clock = new THREE.Clock();
         const loader = new GLTFLoader();
         
-        // Orbit variables
-        let lavaPlanet;
+        // Motion variables
+        let lavaPlanet, alienModel;
         let orbitAngle = 0;
+        let alienOrbitAngle = 0;
         const orbitRadius = 150000;
-        const orbitSpeed = 0.0002; // Very slow movement
+        const orbitSpeed = 0.0002;
 
-        // LOAD LAVA PLANET
+        // 1. LOAD LAVA PLANET
         loader.load('./lavaplanet.glb', (gltf) => {
             lavaPlanet = gltf.scene;
             lavaPlanet.scale.set(18000, 18000, 18000);
@@ -103,12 +102,9 @@
                 if (child.isMesh) {
                     child.material.emissive = new THREE.Color(0xff3300);
                     child.material.emissiveIntensity = 20; 
-                    child.material.roughness = 0.2; 
-                    child.material.metalness = 0.8; 
                 }
             });
 
-            // Add the light TO the planet so it moves with it
             lavaPlanet.add(lavaLight);
             scene.add(lavaPlanet);
 
@@ -117,22 +113,48 @@
             mixers.push(mixer);
         });
 
+        // 2. LOAD ALIEN.GLB
+        loader.load('./alien.glb', (gltf) => {
+            alienModel = gltf.scene;
+            
+            // Scaled large enough to see against the planet
+            alienModel.scale.set(8000, 8000, 8000); 
+            
+            scene.add(alienModel);
+
+            const mixer = new THREE.AnimationMixer(alienModel);
+            if (gltf.animations.length > 0) {
+                mixer.clipAction(gltf.animations[0]).play();
+                mixers.push(mixer);
+            }
+        });
+
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
             mixers.forEach(m => m.update(delta));
             
             if(lavaPlanet) {
-                // 1. Move the planet in a circle
+                // Planet Orbit
                 orbitAngle += orbitSpeed;
                 lavaPlanet.position.x = Math.cos(orbitAngle) * orbitRadius;
                 lavaPlanet.position.z = Math.sin(orbitAngle) * orbitRadius;
-                lavaPlanet.position.y = Math.sin(orbitAngle * 0.5) * 20000; // Slight floating up/down
-
-                // 2. Rotate the planet on its axis
+                lavaPlanet.position.y = Math.sin(orbitAngle * 0.5) * 20000;
                 lavaPlanet.rotation.y += 0.001;
 
-                // 3. Make light pulse
+                // Alien Orbit (Following the planet)
+                if (alienModel) {
+                    alienOrbitAngle += 0.005; // Alien moves faster than planet
+                    const alienDist = 45000; // Distance from planet center
+                    
+                    alienModel.position.x = lavaPlanet.position.x + Math.cos(alienOrbitAngle) * alienDist;
+                    alienModel.position.z = lavaPlanet.position.z + Math.sin(alienOrbitAngle) * alienDist;
+                    alienModel.position.y = lavaPlanet.position.y + Math.cos(alienOrbitAngle * 0.5) * 10000;
+                    
+                    // Point alien toward the planet or movement direction
+                    alienModel.lookAt(lavaPlanet.position);
+                }
+
                 lavaLight.intensity = 60 + Math.sin(Date.now() * 0.001) * 15;
             }
             
