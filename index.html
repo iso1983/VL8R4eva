@@ -89,30 +89,47 @@
         const ships = [];
         const loader = new GLTFLoader();
 
-        // Load the model ONCE, then clone it for the swarm
-        loader.load('./human1.glb', (gltf) => {
-            const baseHuman = gltf.scene;
-            
-      
-            // Change from 10 to 100 or 200 to see if they appear
-            baseHuman.scale.set(150, 150, 150);
+ 
+ // Using './human1.glb' ensures it looks in the same folder as index.html
+loader.load('./human1.glb', (gltf) => {
+    console.log("Human model loaded successfully!");
+    const baseHuman = gltf.scene;
+    
+    // 1. INCREASE SCALE: GitHub models sometimes need a larger scale to be visible
+    baseHuman.scale.set(100, 100, 100); 
 
-            for(let i=0; i<30; i++) {
-                const humanClone = baseHuman.clone();
-                const targetPlanet = planets[Math.floor(Math.random() * planets.length)];
-                
-                humanClone.userData = { 
-                    targetPlanet: targetPlanet,
-                    orbitAngle: Math.random() * Math.PI * 2,
-                    orbitSpeed: 0.005 + Math.random() * 0.01,
-                    orbitDistance: targetPlanet.userData.radius + (50 + Math.random() * 50),
-                    floatOffset: Math.random() * 10
-                };
+    // 2. MATERIAL FIX: Ensure the model isn't just black
+    baseHuman.traverse((child) => {
+        if (child.isMesh) {
+            // This makes the human visible even if lighting is weak
+            child.material.emissive = new THREE.Color(0xffffff);
+            child.material.emissiveIntensity = 0.2;
+        }
+    });
 
-                scene.add(humanClone);
-                ships.push(humanClone);
-            }
-        });
+    for(let i=0; i<30; i++) {
+        const humanClone = baseHuman.clone();
+        const targetPlanet = planets[Math.floor(Math.random() * planets.length)];
+        
+        humanClone.userData = { 
+            targetPlanet: targetPlanet,
+            orbitAngle: Math.random() * Math.PI * 2,
+            orbitSpeed: 0.005 + Math.random() * 0.01,
+            // 3. DISTANCE: Place them slightly further from planets so they don't clip inside
+            orbitDistance: targetPlanet.userData.radius + 80, 
+        };
+
+        scene.add(humanClone);
+        ships.push(humanClone);
+    }
+}, 
+(xhr) => { 
+    // This will show progress in your F12 Console
+    console.log((xhr.loaded / xhr.total * 100) + '% loaded'); 
+},
+(error) => { 
+    console.error("Error loading model:", error); 
+});
 
         // --- Animation Loop ---
         function animate() {
