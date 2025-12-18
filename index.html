@@ -27,7 +27,7 @@
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
         import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 
-        // --- Scene Setup ---
+        // --- Setup ---
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 50000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -40,15 +40,13 @@
         camera.position.set(0, 1000, 2500);
 
         scene.add(new THREE.AmbientLight(0xffffff, 2.5)); 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
-        directionalLight.position.set(1000, 1000, 1000);
-        scene.add(directionalLight);
+        const light = new THREE.DirectionalLight(0xffffff, 2);
+        light.position.set(1000, 1000, 1000);
+        scene.add(light);
 
         // --- Starfield ---
         const starCoords = [];
-        for(let i = 0; i < 15000; i++) {
-            starCoords.push((Math.random() - 0.5) * 20000, (Math.random() - 0.5) * 20000, (Math.random() - 0.5) * 20000);
-        }
+        for(let i = 0; i < 15000; i++) starCoords.push((Math.random() - 0.5) * 20000, (Math.random() - 0.5) * 20000, (Math.random() - 0.5) * 20000);
         const starGeo = new THREE.BufferGeometry();
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
         scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 2, color: 0xffffff })));
@@ -67,40 +65,41 @@
         createPlanet(60, 0xff5500, 1300, 0.0015); 
         createPlanet(100, 0x88cc88, 1800, 0.001); 
 
-        // --- Alien Setup ---
+        // --- Animated Alien Setup ---
         const humans = [];
         const mixers = [];
         const clock = new THREE.Clock();
         const loader = new GLTFLoader();
 
         loader.load('./human1.glb', (gltf) => {
-            const baseModel = gltf.scene;
+            const originalModel = gltf.scene;
+            const animations = gltf.animations;
 
-            // Normalize scale
-            const box = new THREE.Box3().setFromObject(baseModel);
+            // 1. Calculate proper scale once
+            const box = new THREE.Box3().setFromObject(originalModel);
             const size = box.getSize(new THREE.Vector3());
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const scaleFactor = 150 / maxDim; 
-            baseModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            const scaleFactor = 150 / Math.max(size.x, size.y, size.z);
 
-            for(let i = 0; i < 10; i++) {
-                // FIX: Use SkeletonUtils.clone for animated models
-                const clone = SkeletonUtils.clone(baseModel);
-                const targetPlanet = planets[i % planets.length];
+            // 2. Create Clones
+            for(let i = 0; i < 12; i++) {
+                // Use SkeletonUtils to clone the model AND its bone structure
+                const clone = SkeletonUtils.clone(originalModel);
+                clone.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 
+                const targetPlanet = planets[i % planets.length];
                 clone.userData = { 
                     targetPlanet, 
                     orbitAngle: Math.random() * 6.28, 
                     orbitDist: targetPlanet.userData.radius + 350,
                     orbitSpeed: 0.005 + Math.random() * 0.01,
-                    yOffset: (Math.random() - 0.5) * 200
+                    yOffset: (Math.random() - 0.5) * 300
                 };
 
-                // FIX: Check for animations and start the mixer
-                if (gltf.animations && gltf.animations.length > 0) {
+                // 3. Bind Animation to the Clone
+                if (animations && animations.length > 0) {
                     const mixer = new THREE.AnimationMixer(clone);
-                    // Use the animation from the original GLTF on our clone
-                    const action = mixer.clipAction(gltf.animations[0]); 
+                    // Force the mixer to use the animation from the GLB file
+                    const action = mixer.clipAction(animations[0]); 
                     action.play();
                     mixers.push(mixer);
                 }
@@ -108,14 +107,16 @@
                 scene.add(clone);
                 humans.push(clone);
             }
-        });
+        }, undefined, (error) => console.error(error));
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-            
-            // This is the line that makes the animation actually move!
-            mixers.forEach(mixer => mixer.update(delta));
+
+            // REQUIRED: Update every mixer every frame
+            for (const mixer of mixers) {
+                mixer.update(delta);
+            }
 
             planets.forEach(p => {
                 p.userData.angle += p.userData.speed;
