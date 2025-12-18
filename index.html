@@ -15,8 +15,7 @@
             "imports": {
                 "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
                 "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js",
-                "three/examples/jsm/loaders/GLTFLoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js",
-                "three/examples/jsm/utils/SkeletonUtils": "https://unpkg.com/three@0.160.0/examples/jsm/utils/SkeletonUtils.js"
+                "three/examples/jsm/loaders/GLTFLoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js"
             }
         }
     </script>
@@ -25,9 +24,8 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-        import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 
-        // --- Setup ---
+        // --- Scene Setup ---
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 50000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -39,19 +37,20 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         camera.position.set(0, 1000, 2500);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 2.5)); 
+        // Bright Lights
+        scene.add(new THREE.AmbientLight(0xffffff, 3.0)); 
         const light = new THREE.DirectionalLight(0xffffff, 2);
         light.position.set(1000, 1000, 1000);
         scene.add(light);
 
-        // --- Starfield ---
+        // Starfield
         const starCoords = [];
         for(let i = 0; i < 15000; i++) starCoords.push((Math.random() - 0.5) * 20000, (Math.random() - 0.5) * 20000, (Math.random() - 0.5) * 20000);
         const starGeo = new THREE.BufferGeometry();
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
         scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 2, color: 0xffffff })));
 
-        // --- Planets ---
+        // Planets
         const planets = [];
         const createPlanet = (radius, color, distance, speed) => {
             const group = new THREE.Group();
@@ -65,74 +64,77 @@
         createPlanet(60, 0xff5500, 1300, 0.0015); 
         createPlanet(100, 0x88cc88, 1800, 0.001); 
 
-        // --- Animated Alien Setup ---
-        const humans = [];
-        const mixers = [];
+        // --- Alien Setup ---
+        let aliens = [];
+        let mixers = [];
         const clock = new THREE.Clock();
         const loader = new GLTFLoader();
 
+        // Path is './human1.glb' as seen in your GitHub structure
         loader.load('./human1.glb', (gltf) => {
             const originalModel = gltf.scene;
-            const animations = gltf.animations;
-
-            // 1. Calculate proper scale once
+            
+            // Normalize size
             const box = new THREE.Box3().setFromObject(originalModel);
             const size = box.getSize(new THREE.Vector3());
-            const scaleFactor = 150 / Math.max(size.x, size.y, size.z);
+            const scaleFactor = 250 / Math.max(size.x, size.y, size.z); // Increased size slightly
 
-            // 2. Create Clones
-            for(let i = 0; i < 12; i++) {
-                // Use SkeletonUtils to clone the model AND its bone structure
-                const clone = SkeletonUtils.clone(originalModel);
-                clone.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            // Create 8 aliens
+            for(let i = 0; i < 8; i++) {
+                // Using standard clone for simplicity
+                const alien = originalModel.clone();
+                alien.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 
                 const targetPlanet = planets[i % planets.length];
-                clone.userData = { 
+                alien.userData = { 
                     targetPlanet, 
                     orbitAngle: Math.random() * 6.28, 
-                    orbitDist: targetPlanet.userData.radius + 350,
-                    orbitSpeed: 0.005 + Math.random() * 0.01,
-                    yOffset: (Math.random() - 0.5) * 300
+                    orbitDist: targetPlanet.userData.radius + 400,
+                    orbitSpeed: 0.005 + Math.random() * 0.005,
+                    yOffset: (Math.random() - 0.5) * 400
                 };
 
-                // 3. Bind Animation to the Clone
-                if (animations && animations.length > 0) {
-                    const mixer = new THREE.AnimationMixer(clone);
-                    // Force the mixer to use the animation from the GLB file
-                    const action = mixer.clipAction(animations[0]); 
+                // Setup Animation for this specific clone
+                if (gltf.animations.length > 0) {
+                    const mixer = new THREE.AnimationMixer(alien);
+                    // Search for "Idle" or just take the first animation
+                    const action = mixer.clipAction(gltf.animations[0]); 
                     action.play();
                     mixers.push(mixer);
                 }
 
-                scene.add(clone);
-                humans.push(clone);
+                scene.add(alien);
+                aliens.push(alien);
             }
-        }, undefined, (error) => console.error(error));
+            console.log("Swarm loaded successfully!");
+        }, undefined, (e) => console.error("Loader Error:", e));
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // REQUIRED: Update every mixer every frame
+            // Update Animations
             for (const mixer of mixers) {
                 mixer.update(delta);
             }
 
+            // Move Planets
             planets.forEach(p => {
                 p.userData.angle += p.userData.speed;
                 p.position.set(Math.cos(p.userData.angle)*p.userData.distance, 0, Math.sin(p.userData.angle)*p.userData.distance);
             });
 
-            humans.forEach(h => {
-                h.userData.orbitAngle += h.userData.orbitSpeed;
-                const p = h.userData.targetPlanet;
-                h.position.set(
-                    p.position.x + Math.cos(h.userData.orbitAngle) * h.userData.orbitDist,
-                    p.position.y + h.userData.yOffset,
-                    p.position.z + Math.sin(h.userData.orbitAngle) * h.userData.orbitDist
+            // Move Aliens
+            aliens.forEach(a => {
+                a.userData.orbitAngle += a.userData.orbitSpeed;
+                const p = a.userData.targetPlanet;
+                a.position.set(
+                    p.position.x + Math.cos(a.userData.orbitAngle) * a.userData.orbitDist,
+                    p.position.y + a.userData.yOffset,
+                    p.position.z + Math.sin(a.userData.orbitAngle) * a.userData.orbitDist
                 );
-                h.lookAt(p.position);
-                h.rotateY(Math.PI);
+                a.lookAt(p.position);
+                a.rotateY(Math.PI); 
             });
 
             controls.update();
