@@ -25,7 +25,6 @@
         import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
-        // --- Basic Setup ---
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -37,13 +36,13 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         camera.position.set(0, 3000, 8000);
 
-        // --- Lights (Brightened for visibility) ---
+        // --- BRIGHT LIGHTING ---
         scene.add(new THREE.AmbientLight(0xffffff, 5.0)); 
         const light = new THREE.DirectionalLight(0xffffff, 3.0);
         light.position.set(2000, 2000, 2000);
         scene.add(light);
 
-        // --- Stars (Restored) ---
+        // --- RESTORED STARFIELD ---
         const starCoords = [];
         for(let i = 0; i < 20000; i++) starCoords.push((Math.random() - 0.5) * 60000, (Math.random() - 0.5) * 60000, (Math.random() - 0.5) * 60000);
         const starGeo = new THREE.BufferGeometry();
@@ -73,35 +72,41 @@
         loader.load('./human1.glb', (gltf) => {
             const originalModel = gltf.scene;
             
-            // Measure model for huge resizing
+            // 1. CENTER THE PIVOT POINT: This fixes the "flying way below" issue
             const box = new THREE.Box3().setFromObject(originalModel);
+            const center = box.getCenter(new THREE.Vector3());
+            originalModel.position.sub(center); // Centers the model on 0,0,0
+
+            // 2. MASSIVE SCALE: Increased significantly
             const size = box.getSize(new THREE.Vector3());
-            const scaleFactor = 2000 / Math.max(size.x, size.y, size.z); // MASSIVE SCALE
+            const scaleFactor = 2500 / Math.max(size.x, size.y, size.z); 
 
             for(let i = 0; i < 6; i++) {
-                // Manual cloning for reliable animation
-                const alien = i === 0 ? gltf.scene : gltf.scene.clone();
-                alien.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                // Wrap centered model in a group so rotation and translation don't conflict
+                const alienGroup = new THREE.Group();
+                const alienClone = i === 0 ? originalModel : originalModel.clone();
+                alienGroup.add(alienClone);
                 
+                alienGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 const targetPlanet = planets[i % planets.length];
-                alien.userData = { 
+                
+                alienGroup.userData = { 
                     targetPlanet, 
                     orbitAngle: Math.random() * 6.28, 
                     orbitDist: targetPlanet.userData.radius + 2000,
-                    orbitSpeed: 0.008 + Math.random() * 0.005, // FASTER FLIGHT
-                    yOffset: (Math.random() - 0.5) * 1000
+                    orbitSpeed: 0.008 + Math.random() * 0.005,
+                    yOffset: (Math.random() - 0.5) * 500 // Keeps them closer to the center line
                 };
 
                 // Link Animation
+                const mixer = new THREE.AnimationMixer(alienClone);
                 if (gltf.animations.length > 0) {
-                    const mixer = new THREE.AnimationMixer(alien);
-                    const action = mixer.clipAction(gltf.animations[0]);
-                    action.play();
+                    mixer.clipAction(gltf.animations[0]).play();
                     mixers.push(mixer);
                 }
 
-                scene.add(alien);
-                aliens.push(alien);
+                scene.add(alienGroup);
+                aliens.push(alienGroup);
             }
         });
 
@@ -109,23 +114,24 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // 1. Move Animations
+            // Run animations
             mixers.forEach(m => m.update(delta));
 
-            // 2. Move Planets
+            // Move Planets
             planets.forEach(p => {
                 p.userData.angle += p.userData.speed;
                 p.position.set(Math.cos(p.userData.angle)*p.userData.distance, 0, Math.sin(p.userData.angle)*p.userData.distance);
             });
 
-            // 3. Move Aliens (Corrected orbit logic)
+            // Move Aliens
             aliens.forEach(a => {
                 const p = a.userData.targetPlanet;
                 a.userData.orbitAngle += a.userData.orbitSpeed;
                 
+                // Flight logic: Follow the planet exactly on its horizontal plane
                 a.position.set(
                     p.position.x + Math.cos(a.userData.orbitAngle) * a.userData.orbitDist,
-                    p.position.y + a.userData.yOffset,
+                    p.position.y + a.userData.yOffset, 
                     p.position.z + Math.sin(a.userData.orbitAngle) * a.userData.orbitDist
                 );
                 
