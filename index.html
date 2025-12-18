@@ -1,4 +1,4 @@
-index.html<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -14,7 +14,8 @@ index.html<!DOCTYPE html>
         {
             "imports": {
                 "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js"
+                "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js",
+                "three/examples/jsm/loaders/GLTFLoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js"
             }
         }
     </script>
@@ -22,6 +23,7 @@ index.html<!DOCTYPE html>
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+        import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
         // --- Scene Setup ---
         const scene = new THREE.Scene();
@@ -39,101 +41,61 @@ index.html<!DOCTYPE html>
         sunLight.position.set(1000, 1000, 1000);
         scene.add(sunLight);
         
-        const fillLight = new THREE.DirectionalLight(0x00ffff, 1.2);
+        const fillLight = new THREE.DirectionalLight(0x00ffff, 1.5);
         fillLight.position.set(-1000, 500, -500);
         scene.add(fillLight);
-        scene.add(new THREE.AmbientLight(0x111111));
+        scene.add(new THREE.AmbientLight(0x222222));
 
-        // --- High-Detail God-Like Entity ---
-        const createCosmicHuman = () => {
-            const group = new THREE.Group();
+        // --- GLTF Model Loader (The Cosmic Giant) ---
+        let cosmicGiant = null;
+        const loader = new GLTFLoader();
+
+        // Load the 7MB model you downloaded
+        loader.load('./giant.glb', (gltf) => {
+            cosmicGiant = gltf.scene;
             
-            const bodyMat = new THREE.MeshStandardMaterial({ 
-                color: 0x05080c, 
-                metalness: 0.8, 
-                roughness: 0.2,
-                emissive: 0x000a15 
+            // Adjust scale (You may need to change 200 based on the model's actual size)
+            cosmicGiant.scale.set(200, 200, 200); 
+            cosmicGiant.position.set(0, 0, 0);
+
+            // Give him the metallic obsidian look
+            cosmicGiant.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = new THREE.MeshStandardMaterial({
+                        color: 0x050505,
+                        metalness: 0.9,
+                        roughness: 0.2,
+                        emissive: 0x00ffff,
+                        emissiveIntensity: 0.05
+                    });
+                }
             });
-            const glowMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
 
-            // 1. Torso/Chest (V-Shape)
-            const chest = new THREE.Mesh(new THREE.SphereGeometry(45, 32, 32), bodyMat);
-            chest.scale.set(1.2, 0.9, 0.7);
-            chest.position.y = 180;
-            group.add(chest);
+            scene.add(cosmicGiant);
+        }, undefined, (error) => {
+            console.error('An error happened while loading the model:', error);
+        });
 
-            // 2. Muscles (Pecs) - Adds 3D depth
-            const pecGeo = new THREE.SphereGeometry(20, 16, 16);
-            const pecL = new THREE.Mesh(pecGeo, bodyMat);
-            pecL.scale.set(1, 0.8, 0.5);
-            pecL.position.set(20, 190, 25);
-            const pecR = pecL.clone();
-            pecR.position.x = -20;
-            group.add(pecL, pecR);
+        // --- Starfield ---
+        const starCoords = [];
+        for(let i=0; i<15000; i++) {
+            starCoords.push((Math.random()-0.5)*15000, (Math.random()-0.5)*15000, (Math.random()-0.5)*15000);
+        }
+        const starGeo = new THREE.BufferGeometry();
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
+        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 2, color: 0xffffff })));
 
-            // 3. Traps & Shoulders
-            const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(22, 16, 16), bodyMat);
-            shoulderL.position.set(65, 205, 0);
-            const shoulderR = shoulderL.clone();
-            shoulderR.position.x = -65;
-            group.add(shoulderL, shoulderR);
-
-            // 4. Arms
-            const createArm = (side) => {
-                const armGroup = new THREE.Group();
-                const bicep = new THREE.Mesh(new THREE.CapsuleGeometry(13, 60, 4, 12), bodyMat);
-                bicep.position.y = -35;
-                armGroup.add(bicep);
-                armGroup.position.set(side * 65, 205, 0);
-                armGroup.rotation.z = side * 0.7;
-                return armGroup;
-            };
-            group.add(createArm(1), createArm(-1));
-
-            // 5. Head & Eyes
-            const head = new THREE.Mesh(new THREE.SphereGeometry(22, 32, 32), bodyMat);
-            head.position.y = 250;
-            const eyeL = new THREE.Mesh(new THREE.SphereGeometry(2.5, 8, 8), glowMat);
-            eyeL.position.set(8, 255, 18);
-            const eyeR = eyeL.clone();
-            eyeR.position.x = -8;
-            head.add(eyeL, eyeR);
-            group.add(head);
-
-            // 6. Hips & Legs
-            const hips = new THREE.Mesh(new THREE.SphereGeometry(32, 16, 16), bodyMat);
-            hips.position.y = 100;
-            hips.scale.y = 0.8;
-            group.add(hips);
-
-            const legL = new THREE.Mesh(new THREE.CapsuleGeometry(16, 160, 4, 12), bodyMat);
-            legL.position.set(25, 10, 0);
-            const legR = legL.clone();
-            legR.position.x = -25;
-            group.add(legL, legR);
-
-            // 7. INTERNAL LIGHT (Crucial for 3D muscle visibility)
-            const bodyLight = new THREE.PointLight(0x00ffff, 15, 600);
-            bodyLight.position.set(0, 200, 80);
-            group.add(bodyLight);
-
-            scene.add(group);
-            return group;
-        };
-
-        const giant = createCosmicHuman();
-
-        // --- Planet Generator ---
+        // --- Planet Detail Generator ---
         const createPlanetTexture = (color) => {
             const canvas = document.createElement('canvas');
             canvas.width = 1024; canvas.height = 512;
             const context = canvas.getContext('2d');
             context.fillStyle = color;
             context.fillRect(0, 0, 1024, 512);
-            for(let i=0; i<2000; i++) {
-                context.fillStyle = `rgba(0,0,0,${Math.random() * 0.4})`;
+            for(let i=0; i<3000; i++) {
+                context.fillStyle = `rgba(0,0,0,${Math.random() * 0.3})`;
                 context.beginPath();
-                context.arc(Math.random()*1024, Math.random()*512, Math.random()*4, 0, Math.PI*2);
+                context.arc(Math.random()*1024, Math.random()*512, Math.random()*5, 0, Math.PI*2);
                 context.fill();
             }
             return new THREE.CanvasTexture(canvas);
@@ -159,15 +121,6 @@ index.html<!DOCTYPE html>
         createPlanet(50, '#2244ff', 700, 0.002); 
         createPlanet(35, '#ff5500', 1000, 0.0015); 
         createPlanet(60, '#88cc88', 1400, 0.001); 
-
-        // --- Starfield ---
-        const starCoords = [];
-        for(let i=0; i<15000; i++) {
-            starCoords.push((Math.random()-0.5)*15000, (Math.random()-0.5)*15000, (Math.random()-0.5)*15000);
-        }
-        const starGeo = new THREE.BufferGeometry();
-        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 2, color: 0xffffff })));
 
         // --- Ships & Lasers ---
         const ships = [];
@@ -201,17 +154,19 @@ index.html<!DOCTYPE html>
             lasers.push(laser);
         }
 
+        // --- Animation Loop ---
         function animate() {
             requestAnimationFrame(animate);
 
-            // Giant animation
-            giant.position.y = Math.sin(Date.now() * 0.0005) * 20;
-            giant.rotation.y += 0.002;
+            // Animate Giant if loaded
+            if (cosmicGiant) {
+                cosmicGiant.position.y = Math.sin(Date.now() * 0.0005) * 25;
+                cosmicGiant.rotation.y += 0.001;
+            }
 
             planets.forEach(p => {
                 p.userData.angle += p.userData.speed;
-                p.position.x = Math.cos(p.userData.angle) * p.userData.distance;
-                p.position.z = Math.sin(p.userData.angle) * p.userData.distance;
+                p.position.set(Math.cos(p.userData.angle) * p.userData.distance, 0, Math.sin(p.userData.angle) * p.userData.distance);
                 p.rotation.y += 0.005;
             });
 
@@ -220,13 +175,13 @@ index.html<!DOCTYPE html>
                 ship.userData.orbitAngle += ship.userData.orbitSpeed;
                 ship.position.set(
                     p.position.x + Math.cos(ship.userData.orbitAngle) * ship.userData.orbitDistance,
-                    p.position.y + Math.sin(ship.userData.orbitAngle * 0.5) * 15,
+                    p.position.y + Math.sin(ship.userData.orbitAngle * 0.5) * 20,
                     p.position.z + Math.sin(ship.userData.orbitAngle) * ship.userData.orbitDistance
                 );
                 ship.lookAt(p.position);
                 ship.rotateY(Math.PI / 2);
 
-                if (Date.now() - ship.userData.lastShot > 12000 && Math.random() > 0.999) {
+                if (Date.now() - ship.userData.lastShot > 15000 && Math.random() > 0.999) {
                     shootLaser(ship);
                     ship.userData.lastShot = Date.now();
                 }
