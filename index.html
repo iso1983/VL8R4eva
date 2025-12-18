@@ -3,20 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Galactic Colossus - Super Zoom Fixed</title>
+    <title>Three.js Colossal Alien Swarm</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
         canvas { display: block; }
-        #ui { 
-            position: absolute; top: 10px; left: 10px; color: #00ff00; 
-            font-family: 'Courier New', monospace; pointer-events: none;
-            z-index: 100; background: rgba(0,0,0,0.5); padding: 5px;
+        
+        /* Styling for your face image overlay */
+        .profile-overlay {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid #00ffcc;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.6);
+            pointer-events: none; /* Allows 3D mouse controls to work through the image */
+            object-fit: cover;
         }
     </style>
 </head>
 <body>
-    <div id="ui">CLICK ALIEN TO SUPER-ZOOM | PRESS SPACE TO RESET</div>
-    
+
+    <img src="https://raw.githubusercontent.com/iso1983/VL8R4eva/main/myface.png" 
+         alt="Profile" 
+         class="profile-overlay">
+
     <script type="importmap">
         {
             "imports": {
@@ -33,76 +47,86 @@
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000000);
+        
+        // Camera far plane at 1,000,000 to maintain the colossal scale
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 10, 1000000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
         document.body.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
-        camera.position.set(0, 50000, 150000);
-        controls.enableDamping = true;
+        camera.position.set(0, 20000, 40000);
 
         // --- Extreme Lighting ---
-        scene.add(new THREE.AmbientLight(0xffffff, 10.0)); 
+        scene.add(new THREE.AmbientLight(0xffffff, 1.5)); 
         const light = new THREE.DirectionalLight(0xffffff, 5.0);
-        light.position.set(50000, 50000, 50000);
+        light.position.set(10000, 10000, 10000);
         scene.add(light);
 
-        // --- Starfield ---
+        // --- Massive Starfield ---
         const starCoords = [];
-        for(let i = 0; i < 20000; i++) starCoords.push((Math.random()-0.5)*2000000, (Math.random()-0.5)*2000000, (Math.random()-0.5)*2000000);
+        for(let i = 0; i < 30000; i++) {
+            starCoords.push((Math.random() - 0.5) * 300000, (Math.random() - 0.5) * 300000, (Math.random() - 0.5) * 300000);
+        }
         const starGeo = new THREE.BufferGeometry();
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-        const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 150, color: 0xffffff }));
-        scene.add(starField);
+        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 50, color: 0xffffff })));
 
         // --- Planets ---
         const planets = [];
         const createPlanet = (radius, color, distance, speed) => {
             const group = new THREE.Group();
-            const planet = new THREE.Mesh(new THREE.SphereGeometry(radius, 64, 64), new THREE.MeshStandardMaterial({ color }));
+            const planet = new THREE.Mesh(
+                new THREE.SphereGeometry(radius, 64, 64), 
+                new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.3 })
+            );
             group.add(planet);
-            group.userData = { distance, speed, angle: Math.random() * 6.28 };
+            group.userData = { distance, speed, angle: Math.random() * 6.28, radius };
             scene.add(group);
             planets.push(group);
         };
-        createPlanet(2000, 0x2244ff, 50000, 0.001); 
-        createPlanet(1500, 0xff5500, 90000, 0.0008); 
+        
+        createPlanet(2500, 0x2244ff, 15000, 0.001); 
+        createPlanet(1800, 0xff5500, 25000, 0.0008); 
+        createPlanet(3000, 0x88cc88, 40000, 0.0005); 
 
-        // --- Alien Setup ---
+        // --- The Colossal Alien Swarm ---
         let aliens = [];
         let mixers = [];
         const clock = new THREE.Clock();
         const loader = new GLTFLoader();
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
 
+        // Loading the human1.glb from your repository
         loader.load('./human1.glb', (gltf) => {
             const originalModel = gltf.scene;
+            
+            // Normalize pivot
             const box = new THREE.Box3().setFromObject(originalModel);
             const center = box.getCenter(new THREE.Vector3());
             const size = box.getSize(new THREE.Vector3());
-            
-            // Normalize internal pivot
             originalModel.position.set(-center.x, -center.y, -center.z);
 
-            const scaleFactor = 4000000 / Math.max(size.x, size.y, size.z); 
+            // Scale factor to make them 80,000 units tall
+            const scaleFactor = 80000 / Math.max(size.x, size.y, size.z); 
 
             for(let i = 0; i < 4; i++) {
                 const alienWrapper = new THREE.Group();
                 const alienClone = i === 0 ? originalModel : originalModel.clone();
                 alienWrapper.add(alienClone);
-                alienWrapper.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 
+                alienWrapper.scale.set(scaleFactor, scaleFactor, scaleFactor);
                 const targetPlanet = planets[i % planets.length];
+                
                 alienWrapper.userData = { 
                     targetPlanet, 
                     orbitAngle: Math.random() * 6.28, 
-                    orbitDist: 150000 + (Math.random() * 20000), 
-                    orbitSpeed: 0.001,
+                    orbitDist: 30000 + (Math.random() * 10000), 
+                    orbitSpeed: 0.0015
                 };
 
+                // Setup Animation
                 const mixer = new THREE.AnimationMixer(alienClone);
                 if (gltf.animations.length > 0) {
                     mixer.clipAction(gltf.animations[0]).play();
@@ -114,62 +138,34 @@
             }
         });
 
-        // --- CLICK TO SUPER ZOOM ---
-        window.addEventListener('mousedown', (event) => {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(aliens, true);
-
-            if (intersects.length > 0) {
-                let target = intersects[0].object;
-                while (target.parent && !aliens.includes(target)) {
-                    target = target.parent;
-                }
-
-                // Parent camera to the alien
-                target.add(camera);
-                
-                // OFFSET: Backed out to 5.0 to ensure we are outside the mesh
-                camera.position.set(0, 0.5, 5.0); 
-                camera.lookAt(0, 0, 0);
-                
-                controls.enabled = false;
-                starField.visible = false; // Hide stars to prevent clipping blocks
-            }
-        });
-
-        // --- RESET VIEW ---
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                scene.add(camera);
-                camera.position.set(0, 50000, 150000);
-                controls.target.set(0, 0, 0);
-                controls.enabled = true;
-                starField.visible = true;
-            }
-        });
-
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
+            // Update Animations
             for (const mixer of mixers) mixer.update(delta);
 
+            // Update Planets
             planets.forEach(p => {
                 p.userData.angle += p.userData.speed;
-                p.position.set(Math.cos(p.userData.angle)*p.userData.distance, 0, Math.sin(p.userData.angle)*p.userData.distance);
+                p.position.set(
+                    Math.cos(p.userData.angle) * p.userData.distance, 
+                    0, 
+                    Math.sin(p.userData.angle) * p.userData.distance
+                );
             });
 
+            // Update Aliens
             aliens.forEach(a => {
                 const p = a.userData.targetPlanet;
                 a.userData.orbitAngle += a.userData.orbitSpeed;
+                
                 a.position.set(
                     p.position.x + Math.cos(a.userData.orbitAngle) * a.userData.orbitDist,
-                    0, 
+                    p.position.y, 
                     p.position.z + Math.sin(a.userData.orbitAngle) * a.userData.orbitDist
                 );
+                
                 a.lookAt(p.position);
                 a.rotateY(Math.PI); 
             });
@@ -179,6 +175,7 @@
         }
         animate();
 
+        // Handle Resize
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
