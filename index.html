@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Super Zoom - Locked Camera</title>
+    <title>Three.js Super Zoom - Final Fixed</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; }
         canvas { display: block; }
         #ui { 
             position: absolute; top: 10px; left: 10px; color: yellow; 
             font-family: 'Courier New', Courier, monospace; pointer-events: none;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
-    <div id="ui">CLICK ALIEN TO SUPER-ZOOM | CLICK SPACE TO RESET</div>
+    <div id="ui">CLICK ALIEN TO SUPER-ZOOM | PRESS SPACE TO RESET</div>
     
     <script type="importmap">
         {
@@ -31,31 +32,30 @@
         import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
-        // --- Core Scene ---
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 10, 2000000);
+        // CHANGED: near plane from 10 to 1 to allow closer zooming without clipping
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 5000000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
-        camera.position.set(0, 30000, 60000);
+        camera.position.set(0, 40000, 80000);
+        controls.enableDamping = true;
 
-        // Lights
-        scene.add(new THREE.AmbientLight(0xffffff, 8.0)); 
-        const light = new THREE.DirectionalLight(0xffffff, 4.0);
+        scene.add(new THREE.AmbientLight(0xffffff, 10.0)); 
+        const light = new THREE.DirectionalLight(0xffffff, 5.0);
         light.position.set(20000, 20000, 20000);
         scene.add(light);
 
-        // Starfield
+        // Starfield - Smaller size to look better when zoomed
         const starCoords = [];
-        for(let i = 0; i < 20000; i++) starCoords.push((Math.random()-0.5)*600000, (Math.random()-0.5)*600000, (Math.random()-0.5)*600000);
+        for(let i = 0; i < 20000; i++) starCoords.push((Math.random()-0.5)*1000000, (Math.random()-0.5)*1000000, (Math.random()-0.5)*1000000);
         const starGeo = new THREE.BufferGeometry();
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
         scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 100, color: 0xffffff })));
 
-        // --- Planets ---
         const planets = [];
         const createPlanet = (radius, color, distance, speed) => {
             const group = new THREE.Group();
@@ -65,10 +65,9 @@
             scene.add(group);
             planets.push(group);
         };
-        createPlanet(1000, 0x2244ff, 20000, 0.001); 
-        createPlanet(800, 0xff5500, 35000, 0.0008); 
+        createPlanet(1200, 0x2244ff, 25000, 0.001); 
+        createPlanet(1000, 0xff5500, 45000, 0.0008); 
 
-        // --- Alien Setup ---
         let aliens = [];
         let mixers = [];
         const clock = new THREE.Clock();
@@ -81,9 +80,11 @@
             const box = new THREE.Box3().setFromObject(originalModel);
             const center = box.getCenter(new THREE.Vector3());
             const size = box.getSize(new THREE.Vector3());
+            
+            // Re-centering the model internal geometry
             originalModel.position.set(-center.x, -center.y, -center.z);
 
-            const scaleFactor = 100000 / Math.max(size.x, size.y, size.z); 
+            const scaleFactor = 120000 / Math.max(size.x, size.y, size.z); 
 
             for(let i = 0; i < 4; i++) {
                 const alienWrapper = new THREE.Group();
@@ -95,7 +96,7 @@
                 alienWrapper.userData = { 
                     targetPlanet, 
                     orbitAngle: Math.random() * 6.28, 
-                    orbitDist: 40000 + (Math.random() * 10000), 
+                    orbitDist: 50000 + (Math.random() * 10000), 
                     orbitSpeed: 0.001,
                 };
 
@@ -110,7 +111,7 @@
             }
         });
 
-        // --- CLICK TO SUPER ZOOM ---
+        // FIXED ZOOM INTERACTION
         window.addEventListener('mousedown', (event) => {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -119,26 +120,28 @@
             const intersects = raycaster.intersectObjects(aliens, true);
 
             if (intersects.length > 0) {
-                // Find the top-level alien group
                 let target = intersects[0].object;
                 while (target.parent && !aliens.includes(target)) {
                     target = target.parent;
                 }
 
-                // SUPER ZOOM LOGIC: Attach camera to alien
-                target.add(camera); 
-                // Close-up position relative to alien center
-                camera.position.set(0, 0, 1.5); 
-                controls.target.set(0, 0, 0);
-                controls.enabled = false; // Disable controls so it stays locked
+                // Parent the camera to the alien so it stays locked
+                target.add(camera);
+                
+                // Adjust position relative to the alien's local scale
+                // 1.5 units in front of the center
+                camera.position.set(0, 0.2, 1.2); 
+                camera.lookAt(0,0,0);
+                
+                controls.enabled = false;
             }
         });
 
-        // RESET: Press 'Space' to return to space view
+        // SPACEBAR TO RESET
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
-                scene.add(camera); // Re-attach to scene
-                camera.position.set(0, 30000, 60000);
+                scene.add(camera);
+                camera.position.set(0, 40000, 80000);
                 controls.target.set(0, 0, 0);
                 controls.enabled = true;
             }
