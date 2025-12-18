@@ -3,33 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Colossal Alien Swarm</title>
+    <title>Colossal Alien Swarm - VL8R4eva</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #000; }
         canvas { display: block; }
-        
-        /* Styling for your face image overlay */
-        .profile-overlay {
+
+        /* Hover-interactive profile image */
+        .profile-container {
             position: absolute;
-            top: 20px;
+            top: 30px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 100;
+            cursor: pointer;
+        }
+
+        .profile-overlay {
             width: 120px;
             height: 120px;
             border-radius: 50%;
-            border: 3px solid #00ffcc;
-            box-shadow: 0 0 20px rgba(0, 255, 204, 0.6);
-            pointer-events: none; /* Allows 3D mouse controls to work through the image */
+            border: 3px solid #00fff2;
+            box-shadow: 0 0 20px #00fff2, inset 0 0 10px #00fff2;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             object-fit: cover;
+            pointer-events: auto; /* Re-enabled so hover works */
+        }
+
+        /* Hover effect: Scales up and increases glow */
+        .profile-overlay:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 40px #00fff2, 0 0 60px #00fff2;
+            border-color: #ffffff;
         }
     </style>
 </head>
 <body>
 
-    <img src="https://raw.githubusercontent.com/iso1983/VL8R4eva/main/myface.png" 
-         alt="Profile" 
-         class="profile-overlay">
+    <div class="profile-container">
+        <img src="https://raw.githubusercontent.com/iso1983/VL8R4eva/main/myface.png" 
+             alt="Profile" 
+             class="profile-overlay">
+    </div>
 
     <script type="importmap">
         {
@@ -47,8 +61,6 @@
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
         const scene = new THREE.Scene();
-        
-        // Camera far plane at 1,000,000 to maintain the colossal scale
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 10, 1000000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -56,23 +68,29 @@
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         document.body.appendChild(renderer.domElement);
 
+        // Orbit Controls
         const controls = new OrbitControls(camera, renderer.domElement);
-        camera.position.set(0, 20000, 40000);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        camera.position.set(0, 25000, 50000);
 
-        // --- Extreme Lighting ---
-        scene.add(new THREE.AmbientLight(0xffffff, 1.5)); 
-        const light = new THREE.DirectionalLight(0xffffff, 5.0);
-        light.position.set(10000, 10000, 10000);
-        scene.add(light);
+        // --- Boosted Ambient & Directional Lighting ---
+        const ambient = new THREE.AmbientLight(0xffffff, 2.5); 
+        scene.add(ambient);
+        
+        const sunLight = new THREE.DirectionalLight(0x00fff2, 3.0); // Cyan tint for space vibe
+        sunLight.position.set(20000, 20000, 20000);
+        scene.add(sunLight);
 
         // --- Massive Starfield ---
         const starCoords = [];
-        for(let i = 0; i < 30000; i++) {
-            starCoords.push((Math.random() - 0.5) * 300000, (Math.random() - 0.5) * 300000, (Math.random() - 0.5) * 300000);
+        for(let i = 0; i < 40000; i++) {
+            starCoords.push((Math.random() - 0.5) * 400000, (Math.random() - 0.5) * 400000, (Math.random() - 0.5) * 400000);
         }
         const starGeo = new THREE.BufferGeometry();
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 50, color: 0xffffff })));
+        const starMat = new THREE.PointsMaterial({ size: 60, color: 0xffffff, transparent: true, opacity: 0.8 });
+        scene.add(new THREE.Points(starGeo, starMat));
 
         // --- Planets ---
         const planets = [];
@@ -80,53 +98,47 @@
             const group = new THREE.Group();
             const planet = new THREE.Mesh(
                 new THREE.SphereGeometry(radius, 64, 64), 
-                new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.3 })
+                new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.2 })
             );
             group.add(planet);
-            group.userData = { distance, speed, angle: Math.random() * 6.28, radius };
+            group.userData = { distance, speed, angle: Math.random() * Math.PI * 2 };
             scene.add(group);
             planets.push(group);
         };
         
-        createPlanet(2500, 0x2244ff, 15000, 0.001); 
-        createPlanet(1800, 0xff5500, 25000, 0.0008); 
-        createPlanet(3000, 0x88cc88, 40000, 0.0005); 
+        createPlanet(3000, 0x2244ff, 18000, 0.001); 
+        createPlanet(2000, 0xff5500, 30000, 0.0008); 
+        createPlanet(4000, 0x00ffaa, 45000, 0.0005); 
 
-        // --- The Colossal Alien Swarm ---
+        // --- Colossal Alien Swarm ---
         let aliens = [];
         let mixers = [];
         const clock = new THREE.Clock();
         const loader = new GLTFLoader();
 
-        // Loading the human1.glb from your repository
         loader.load('./human1.glb', (gltf) => {
             const originalModel = gltf.scene;
-            
-            // Normalize pivot
             const box = new THREE.Box3().setFromObject(originalModel);
             const center = box.getCenter(new THREE.Vector3());
             const size = box.getSize(new THREE.Vector3());
             originalModel.position.set(-center.x, -center.y, -center.z);
 
-            // Scale factor to make them 80,000 units tall
-            const scaleFactor = 80000 / Math.max(size.x, size.y, size.z); 
+            const scaleFactor = 90000 / Math.max(size.x, size.y, size.z); 
 
-            for(let i = 0; i < 4; i++) {
+            for(let i = 0; i < 6; i++) {
                 const alienWrapper = new THREE.Group();
                 const alienClone = i === 0 ? originalModel : originalModel.clone();
                 alienWrapper.add(alienClone);
-                
                 alienWrapper.scale.set(scaleFactor, scaleFactor, scaleFactor);
-                const targetPlanet = planets[i % planets.length];
                 
+                const targetPlanet = planets[i % planets.length];
                 alienWrapper.userData = { 
                     targetPlanet, 
-                    orbitAngle: Math.random() * 6.28, 
-                    orbitDist: 30000 + (Math.random() * 10000), 
-                    orbitSpeed: 0.0015
+                    orbitAngle: Math.random() * Math.PI * 2, 
+                    orbitDist: 35000 + (Math.random() * 15000), 
+                    orbitSpeed: 0.001 + (Math.random() * 0.001)
                 };
 
-                // Setup Animation
                 const mixer = new THREE.AnimationMixer(alienClone);
                 if (gltf.animations.length > 0) {
                     mixer.clipAction(gltf.animations[0]).play();
@@ -142,10 +154,8 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // Update Animations
             for (const mixer of mixers) mixer.update(delta);
 
-            // Update Planets
             planets.forEach(p => {
                 p.userData.angle += p.userData.speed;
                 p.position.set(
@@ -155,17 +165,14 @@
                 );
             });
 
-            // Update Aliens
             aliens.forEach(a => {
                 const p = a.userData.targetPlanet;
                 a.userData.orbitAngle += a.userData.orbitSpeed;
-                
                 a.position.set(
                     p.position.x + Math.cos(a.userData.orbitAngle) * a.userData.orbitDist,
-                    p.position.y, 
+                    p.position.y + Math.sin(a.userData.orbitAngle * 0.5) * 5000, // Added slight Y-bobbing
                     p.position.z + Math.sin(a.userData.orbitAngle) * a.userData.orbitDist
                 );
-                
                 a.lookAt(p.position);
                 a.rotateY(Math.PI); 
             });
@@ -175,7 +182,6 @@
         }
         animate();
 
-        // Handle Resize
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
