@@ -93,8 +93,9 @@
         loader.load('./human1.glb', (gltf) => {
             const baseHuman = gltf.scene;
             
-            // Adjust this scale if the human is too small or too big
-            baseHuman.scale.set(10, 10, 10); 
+      
+            // Change from 10 to 100 or 200 to see if they appear
+            baseHuman.scale.set(150, 150, 150);
 
             for(let i=0; i<30; i++) {
                 const humanClone = baseHuman.clone();
