@@ -34,19 +34,16 @@
         document.body.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
-        camera.position.set(0, 2000, 5000);
+        camera.position.set(0, 2000, 6000);
 
-        // --- BRIGHT LIGHTING ---
-        scene.add(new THREE.AmbientLight(0xffffff, 5.0)); 
-        const sunLight = new THREE.PointLight(0xffffff, 10, 20000);
-        sunLight.position.set(2000, 2000, 2000);
-        scene.add(sunLight);
+        // --- BRIGHT LIGHTING & STARS ---
+        scene.add(new THREE.AmbientLight(0xffffff, 4.0)); 
+        const light = new THREE.DirectionalLight(0xffffff, 2.0);
+        light.position.set(2000, 2000, 2000);
+        scene.add(light);
 
-        // --- DENSE STARFIELD ---
         const starCoords = [];
-        for(let i = 0; i < 20000; i++) {
-            starCoords.push((Math.random() - 0.5) * 40000, (Math.random() - 0.5) * 40000, (Math.random() - 0.5) * 40000);
-        }
+        for(let i = 0; i < 20000; i++) starCoords.push((Math.random() - 0.5) * 50000, (Math.random() - 0.5) * 50000, (Math.random() - 0.5) * 50000);
         const starGeo = new THREE.BufferGeometry();
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
         scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 4, color: 0xffffff })));
@@ -61,48 +58,48 @@
             scene.add(group);
             planets.push(group);
         };
-        createPlanet(150, 0x2244ff, 1500, 0.002); 
-        createPlanet(100, 0xff5500, 2500, 0.0015); 
-        createPlanet(200, 0x88cc88, 4000, 0.001); 
+        createPlanet(200, 0x2244ff, 2000, 0.002); 
+        createPlanet(150, 0xff5500, 3500, 0.0015); 
+        createPlanet(250, 0x88cc88, 5000, 0.001); 
 
-        // --- Alien Swarm ---
+        // --- Alien Setup ---
         let aliens = [];
         let mixers = [];
         const clock = new THREE.Clock();
         const loader = new GLTFLoader();
 
         loader.load('./human1.glb', (gltf) => {
-            const model = gltf.scene;
+            const baseScene = gltf.scene;
             
-            // 1. CENTER THE MODEL: This ensures it orbits correctly
-            const box = new THREE.Box3().setFromObject(model);
+            // Normalize center and size
+            const box = new THREE.Box3().setFromObject(baseScene);
             const center = box.getCenter(new THREE.Vector3());
-            model.position.sub(center); // Move model so its center is 0,0,0
-            
-            const wrapper = new THREE.Group();
-            wrapper.add(model);
-
-            // 2. MASSIVE SCALE: 1000 units tall
             const size = box.getSize(new THREE.Vector3());
-            const scaleFactor = 1000 / Math.max(size.x, size.y, size.z); 
+            const scaleFactor = 1500 / Math.max(size.x, size.y, size.z); // EVEN BIGGER SIZE
 
             for(let i = 0; i < 6; i++) {
-                const alienClone = wrapper.clone();
+                // We use standard clone, but we must create a new Mixer for each clone
+                const alienClone = baseScene.clone();
                 alienClone.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                
+                // Fix the "sinking" by offsetting the cloned mesh by its center
+                alienClone.position.set(0,0,0); 
                 
                 const targetPlanet = planets[i % planets.length];
                 alienClone.userData = { 
                     targetPlanet, 
                     orbitAngle: Math.random() * 6.28, 
-                    orbitDist: targetPlanet.userData.radius + 1200, // Large orbit to accommodate huge alien
-                    orbitSpeed: 0.004 + Math.random() * 0.004,
-                    yFloat: Math.random() * 500 // Slight height variation
+                    orbitDist: targetPlanet.userData.radius + 1500,
+                    orbitSpeed: 0.005 + Math.random() * 0.005,
+                    yOffset: (Math.random() - 0.5) * 500
                 };
 
-                // Setup Animation for clones
-                const mixer = new THREE.AnimationMixer(alienClone);
+                // ANIMATION FIX: Attach the animation from the original GLTF to this specific clone
                 if (gltf.animations.length > 0) {
-                    mixer.clipAction(gltf.animations[0]).play();
+                    const mixer = new THREE.AnimationMixer(alienClone);
+                    gltf.animations.forEach((clip) => {
+                        mixer.clipAction(clip).play();
+                    });
                     mixers.push(mixer);
                 }
 
@@ -115,6 +112,7 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
+            // Run animations
             for (const mixer of mixers) mixer.update(delta);
 
             planets.forEach(p => {
@@ -126,14 +124,13 @@
                 const p = a.userData.targetPlanet;
                 a.userData.orbitAngle += a.userData.orbitSpeed;
                 
-                // Position relative to the planet's current moving position
+                // Flight logic: Follow the planet
                 a.position.set(
                     p.position.x + Math.cos(a.userData.orbitAngle) * a.userData.orbitDist,
-                    p.position.y + a.userData.yFloat, // Controlled height
+                    p.position.y + a.userData.yOffset,
                     p.position.z + Math.sin(a.userData.orbitAngle) * a.userData.orbitDist
                 );
                 
-                // Always look at the planet they are orbiting
                 a.lookAt(p.position);
                 a.rotateY(Math.PI); 
             });
