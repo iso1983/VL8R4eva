@@ -3,81 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lava Universe Dashboard - VL8R4eva</title>
+    <title>Crypto Universe - VL8R4eva</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Roboto, sans-serif; }
         canvas { display: block; }
 
-        /* Profile Image */
+        /* Fixed Image Overlay */
         .profile-container {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 1000; cursor: pointer;
+            z-index: 2000; cursor: pointer;
         }
         .profile-overlay {
-            width: 80px; height: 80px; border-radius: 50%;
-            border: 2px solid #ff4400; box-shadow: 0 0 15px #ff4400;
-            transition: 0.3s; object-fit: cover;
+            width: 90px; height: 90px; border-radius: 50%;
+            border: 3px solid #ff4400; box-shadow: 0 0 20px #ff4400;
+            object-fit: cover;
         }
 
-        /* Information Dashboard Overlay */
-        .dashboard {
+        /* Dashboard Containers */
+        .window {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            width: 280px;
             z-index: 1000;
             color: white;
-            background: rgba(255, 68, 0, 0.1);
-            backdrop-filter: blur(10px); /* Glass effect */
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 68, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        .dashboard h2 { margin: 0 0 15px 0; font-size: 18px; color: #ffaa00; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #ff4400; padding-bottom: 5px; }
+        h3 { margin: 0 0 10px 0; color: #ffaa00; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        
+        /* Layout Positions */
+        #btc-window { top: 20px; left: 20px; width: 250px; }
+        #eth-window { top: 180px; left: 20px; width: 250px; }
+        #whale-window { bottom: 20px; left: 20px; width: 350px; max-height: 300px; overflow-y: auto; }
 
-        .info-slot { margin-bottom: 15px; }
-        .info-label { font-size: 12px; color: #aaa; text-transform: uppercase; }
-        .info-value { font-size: 20px; font-weight: bold; color: #fff; }
-        .up { color: #00ff88; font-size: 14px; }
+        .price { font-size: 28px; font-weight: bold; margin-bottom: 5px; }
+        .change { font-size: 14px; color: #00ff88; }
+        .data-row { display: flex; justify-content: space-between; font-size: 12px; margin-top: 8px; color: #ccc; }
 
-        .whale-alert {
-            background: rgba(0, 0, 0, 0.3);
-            border-left: 3px solid #00fff2;
-            padding: 10px;
+        .whale-item {
+            background: rgba(255, 68, 0, 0.05);
+            border-left: 3px solid #ff4400;
+            padding: 8px;
+            margin-bottom: 10px;
             font-size: 13px;
-            margin-top: 10px;
-            border-radius: 4px;
+            line-height: 1.4;
         }
     </style>
 </head>
 <body>
 
-    <div class="dashboard">
-        <h2>Market Terminal</h2>
-        
-        <div class="info-slot">
-            <div class="info-label">Bitcoin (BTC)</div>
-            <div class="info-value">$96,420.00 <span class="up">▲ 2.4%</span></div>
-        </div>
-
-        <div class="info-slot">
-            <div class="info-label">Ethereum (ETH)</div>
-            <div class="info-value">$3,512.45 <span class="up">▲ 1.8%</span></div>
-        </div>
-
-        <div class="info-label">Whale Alerts</div>
-        <div class="whale-alert">
-            🚨 1,500 #BTC (144M USD) transferred from Unknown Wallet to #Binance
-        </div>
-        <div class="whale-alert">
-            🐋 25,000 #ETH (87M USD) moved between Unknown Wallets
-        </div>
-    </div>
-
     <div class="profile-container">
         <img src="https://raw.githubusercontent.com/iso1983/VL8R4eva/main/myface.png" class="profile-overlay">
+    </div>
+
+    <div id="btc-window" class="window">
+        <h3>Bitcoin Terminal</h3>
+        <div class="price">$96,420.00</div>
+        <div class="change">▲ 2.45% (24h)</div>
+        <div class="data-row"><span>Vol:</span> <span>$35.2B</span></div>
+        <div class="data-row"><span>Market Cap:</span> <span>$1.9T</span></div>
+    </div>
+
+    <div id="eth-window" class="window">
+        <h3>Ethereum Terminal</h3>
+        <div class="price">$3,512.45</div>
+        <div class="change">▲ 1.82% (24h)</div>
+        <div class="data-row"><span>Gas:</span> <span>12 Gwei</span></div>
+        <div class="data-row"><span>Staked:</span> <span>32.1M ETH</span></div>
+    </div>
+
+    <div id="whale-window" class="window">
+        <h3>Whale Watcher</h3>
+        <div class="whale-item">🚨 1,500 #BTC (144,630,000 USD) transferred from Unknown Wallet to #Binance</div>
+        <div class="whale-item">🐋 25,000 #ETH (87,811,250 USD) moved between Unknown Wallets</div>
+        <div class="whale-item">💰 50,000,000 #USDC minted at Tether Treasury</div>
     </div>
 
     <script type="importmap">
@@ -101,6 +103,8 @@
         
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
+        
+        // --- FIXED LAVA COLOR SETTINGS ---
         renderer.toneMapping = THREE.ReinhardToneMapping; 
         renderer.toneMappingExposure = 2.5; 
         renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -108,9 +112,13 @@
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        camera.position.set(0, 80000, 250000);
+        camera.position.set(0, 40000, 150000);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+        // Env map for the dark rock reflections
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmremGenerator.fromScene(new THREE.Scene()).texture;
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.1)); 
         const lavaLight = new THREE.PointLight(0xff4400, 60, 1000000, 1.5);
 
         const starCoords = [];
@@ -130,7 +138,14 @@
         loader.load('./lavaplanet.glb', (gltf) => {
             lavaPlanet = gltf.scene;
             lavaPlanet.scale.set(18000, 18000, 18000);
-            lavaPlanet.traverse(child => { if (child.isMesh) { child.material.emissiveIntensity = 20; } });
+            lavaPlanet.traverse(child => {
+                if (child.isMesh) {
+                    child.material.emissive = new THREE.Color(0xff2200);
+                    child.material.emissiveIntensity = 15; // Restoration of the Sketchfab look
+                    child.material.roughness = 0.3;
+                    child.material.metalness = 0.8;
+                }
+            });
             lavaPlanet.add(lavaLight);
             scene.add(lavaPlanet);
             const mixer = new THREE.AnimationMixer(lavaPlanet);
@@ -143,7 +158,10 @@
             alienModel.scale.set(8000, 8000, 8000); 
             scene.add(alienModel);
             const mixer = new THREE.AnimationMixer(alienModel);
-            if (gltf.animations.length > 0) { mixer.clipAction(gltf.animations[0]).play(); mixers.push(mixer); }
+            if (gltf.animations.length > 0) {
+                mixer.clipAction(gltf.animations[0]).play();
+                mixers.push(mixer);
+            }
         });
 
         function animate() {
