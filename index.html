@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Cosmic Giant Battle</title>
+    <title>Three.js Cosmic Superman</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; }
         canvas { display: block; }
@@ -35,11 +35,11 @@
         document.body.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
-        camera.position.set(0, 800, 2000); // Backed up camera to see everything
+        camera.position.set(0, 500, 1500);
 
         // --- Lighting ---
-        scene.add(new THREE.AmbientLight(0xffffff, 1.5)); 
-        const sunLight = new THREE.PointLight(0xffffff, 8, 10000);
+        scene.add(new THREE.AmbientLight(0xffffff, 1.2)); 
+        const sunLight = new THREE.PointLight(0xffffff, 5, 10000);
         sunLight.position.set(1000, 1000, 1000);
         scene.add(sunLight);
 
@@ -53,29 +53,32 @@
             cosmicGiant.scale.set(300, 300, 300); 
             cosmicGiant.position.set(0, 0, 0);
 
-            // Calculate height for positioning
+            // 1. Find the actual height of THIS Superman model
             const bbox = new THREE.Box3().setFromObject(cosmicGiant);
             const height = bbox.max.y - bbox.min.y;
 
-            // Load face texture
+            // 2. Load your face texture
             const texLoader = new THREE.TextureLoader();
-            texLoader.load('./myface.png', (texture) => {
-                const faceGeometry = new THREE.PlaneGeometry(100, 100); // Large size for easy finding
-                const faceMaterial = new THREE.MeshBasicMaterial({ 
-                    map: texture, 
-                    transparent: true,
-                    side: THREE.DoubleSide,
-                    depthTest: false,
-                    polygonOffset: true,
-                    polygonOffsetFactor: -10 // Forces it to the very front
-                });
-                
-                faceOverlay = new THREE.Mesh(faceGeometry, faceMaterial);
-                // Position near the top of the model
-                faceOverlay.position.set(0, height * 0.9, 100); 
-                cosmicGiant.add(faceOverlay);
+            const faceTexture = texLoader.load('./myface.png');
+            
+            // 3. Create the face plate
+            const faceGeometry = new THREE.PlaneGeometry(55, 55); 
+            const faceMaterial = new THREE.MeshBasicMaterial({ 
+                map: faceTexture, 
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthTest: false,     // Forces it to render in front of Superman's face
+                polygonOffset: true, 
+                polygonOffsetFactor: -4
             });
+            
+            faceOverlay = new THREE.Mesh(faceGeometry, faceMaterial);
 
+            // 4. Position specifically for the Superman head
+            // We set Y to nearly the top and push Z forward to stay in front of the nose.
+            faceOverlay.position.set(0, height * 0.93, 45); 
+            
+            cosmicGiant.add(faceOverlay); 
             scene.add(cosmicGiant);
 
         }, undefined, (error) => {
@@ -96,7 +99,7 @@
         const createPlanet = (radius, color, distance, speed) => {
             const group = new THREE.Group();
             const planet = new THREE.Mesh(
-                new THREE.SphereGeometry(radius, 64, 64),
+                new THREE.SphereGeometry(radius, 32, 32),
                 new THREE.MeshStandardMaterial({ color: color, metalness: 0.1, roughness: 0.8 })
             );
             group.add(planet);
@@ -105,23 +108,25 @@
             planets.push(group);
         };
 
-        createPlanet(50, 0x2244ff, 800, 0.002); 
-        createPlanet(35, 0xff5500, 1200, 0.0015); 
+        createPlanet(50, 0x2244ff, 700, 0.002); 
+        createPlanet(35, 0xff5500, 1100, 0.0015); 
 
         // --- Animation Loop ---
         function animate() {
             requestAnimationFrame(animate);
 
             if (cosmicGiant) {
-                cosmicGiant.rotation.y += 0.002;
+                cosmicGiant.rotation.y += 0.001; 
+
+                // Makes the face plate always face the camera
                 if (faceOverlay) {
-                    faceOverlay.quaternion.copy(camera.quaternion); // Billboard effect
+                    faceOverlay.quaternion.copy(camera.quaternion);
                 }
             }
 
             planets.forEach(p => {
                 p.userData.angle += p.userData.speed;
-                p.position.set(Math.cos(p.userData.angle) * p.userData.dist, 0, Math.sin(p.userData.angle) * p.userData.dist);
+                p.position.set(Math.cos(p.userData.angle) * p.userData.distance, 0, Math.sin(p.userData.angle) * p.userData.distance);
             });
 
             controls.update();
