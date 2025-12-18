@@ -37,20 +37,24 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         camera.position.set(0, 1500, 3500);
 
-        // EXTRA BRIGHT LIGHTING
-        scene.add(new THREE.AmbientLight(0xffffff, 3.5)); 
-        const light = new THREE.DirectionalLight(0xffffff, 2.5);
-        light.position.set(1000, 1000, 1000);
-        scene.add(light);
+        // --- LIGHTING RESTORATION ---
+        // High intensity ambient light to ensure nothing is dark
+        scene.add(new THREE.AmbientLight(0xffffff, 4.0)); 
+        const sunLight = new THREE.DirectionalLight(0xffffff, 3.0);
+        sunLight.position.set(2000, 2000, 2000);
+        scene.add(sunLight);
 
-        // Starfield
+        // --- STARFIELD RESTORATION ---
         const starCoords = [];
-        for(let i = 0; i < 10000; i++) starCoords.push((Math.random() - 0.5) * 20000, (Math.random() - 0.5) * 20000, (Math.random() - 0.5) * 20000);
+        for(let i = 0; i < 15000; i++) {
+            starCoords.push((Math.random() - 0.5) * 30000, (Math.random() - 0.5) * 30000, (Math.random() - 0.5) * 30000);
+        }
         const starGeo = new THREE.BufferGeometry();
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
-        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 2, color: 0xffffff })));
+        const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 3, color: 0xffffff }));
+        scene.add(stars);
 
-        // Planets
+        // --- Planets ---
         const planets = [];
         const createPlanet = (radius, color, distance, speed) => {
             const group = new THREE.Group();
@@ -60,44 +64,43 @@
             scene.add(group);
             planets.push(group);
         };
-        createPlanet(80, 0x2244ff, 800, 0.002); 
-        createPlanet(60, 0xff5500, 1300, 0.0015); 
-        createPlanet(100, 0x88cc88, 1800, 0.001); 
+        createPlanet(80, 0x2244ff, 1200, 0.002); 
+        createPlanet(60, 0xff5500, 1800, 0.0015); 
+        createPlanet(100, 0x88cc88, 2500, 0.001); 
 
-        // --- Alien Swarm ---
+        // --- Alien Setup ---
         let aliens = [];
         let mixers = [];
         const clock = new THREE.Clock();
         const loader = new GLTFLoader();
 
         loader.load('./human1.glb', (gltf) => {
-            console.log("Model loaded successfully!");
+            const originalModel = gltf.scene;
             
-            // Auto-scale logic
-            const box = new THREE.Box3().setFromObject(gltf.scene);
+            // --- MASSIVE SIZE INCREASE ---
+            // This manually sets the scale much higher than before
+            const box = new THREE.Box3().setFromObject(originalModel);
             const size = box.getSize(new THREE.Vector3());
-            const scaleFactor = 350 / Math.max(size.x, size.y, size.z);
+            // Scaling to be roughly 500 units tall (much larger than the planets)
+            const scaleFactor = 600 / Math.max(size.x, size.y, size.z); 
 
-            for(let i = 0; i < 8; i++) {
-                // IMPORTANT: We use the scene directly for the first, then clone
+            for(let i = 0; i < 6; i++) {
                 const alien = i === 0 ? gltf.scene : gltf.scene.clone();
-                
                 alien.scale.set(scaleFactor, scaleFactor, scaleFactor);
-                const targetPlanet = planets[i % planets.length];
                 
+                const targetPlanet = planets[i % planets.length];
                 alien.userData = { 
                     targetPlanet, 
                     orbitAngle: Math.random() * 6.28, 
-                    orbitDist: targetPlanet.userData.radius + 500,
-                    orbitSpeed: 0.005 + Math.random() * 0.005,
-                    yOffset: (Math.random() - 0.5) * 600
+                    orbitDist: targetPlanet.userData.radius + 800, // Orbits much further out
+                    orbitSpeed: 0.003 + Math.random() * 0.003,
+                    yOffset: (Math.random() - 0.5) * 800
                 };
 
                 // Setup Animation
-                if (gltf.animations && gltf.animations.length > 0) {
+                if (gltf.animations.length > 0) {
                     const mixer = new THREE.AnimationMixer(alien);
-                    // Force playback of the first animation (Idle)
-                    const action = mixer.clipAction(gltf.animations[0]);
+                    const action = mixer.clipAction(gltf.animations[0]); 
                     action.play();
                     mixers.push(mixer);
                 }
@@ -105,15 +108,14 @@
                 scene.add(alien);
                 aliens.push(alien);
             }
-        }, undefined, (e) => console.error("Loader Error:", e));
+        });
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // Explicitly update all animation mixers
-            for (let j = 0; j < mixers.length; j++) {
-                mixers[j].update(delta);
+            for (const mixer of mixers) {
+                mixer.update(delta);
             }
 
             planets.forEach(p => {
