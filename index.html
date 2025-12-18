@@ -25,7 +25,6 @@
         import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
-        // --- Scene Setup ---
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 25000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -37,13 +36,12 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         camera.position.set(0, 800, 1500);
 
-        // --- Lighting ---
-        scene.add(new THREE.AmbientLight(0xffffff, 1.5)); 
-        const sunLight = new THREE.PointLight(0xffffff, 8, 10000);
+        scene.add(new THREE.AmbientLight(0xffffff, 2.0)); 
+        const sunLight = new THREE.PointLight(0xffffff, 10, 10000);
         sunLight.position.set(1000, 1000, 1000);
         scene.add(sunLight);
 
-        // --- Starfield ---
+        // Starfield
         const starCoords = [];
         for(let i=0; i<15000; i++) {
             starCoords.push((Math.random()-0.5)*15000, (Math.random()-0.5)*15000, (Math.random()-0.5)*15000);
@@ -52,86 +50,62 @@
         starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
         scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 2, color: 0xffffff })));
 
-        // --- Planet Generator ---
-        const createPlanetTexture = (color) => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 1024; canvas.height = 512;
-            const context = canvas.getContext('2d');
-            context.fillStyle = color;
-            context.fillRect(0, 0, 1024, 512);
-            for(let i=0; i<2000; i++) {
-                context.fillStyle = `rgba(0,0,0,${Math.random() * 0.4})`;
-                context.beginPath();
-                context.arc(Math.random()*1024, Math.random()*512, Math.random()*4, 0, Math.PI*2);
-                context.fill();
-            }
-            return new THREE.CanvasTexture(canvas);
-        };
-
+        // Planets
         const planets = [];
         const createPlanet = (radius, color, distance, speed) => {
             const group = new THREE.Group();
             const planet = new THREE.Mesh(
-                new THREE.SphereGeometry(radius, 64, 64),
-                new THREE.MeshStandardMaterial({ map: createPlanetTexture(color), metalness: 0.1, roughness: 0.8 })
+                new THREE.SphereGeometry(radius, 32, 32),
+                new THREE.MeshStandardMaterial({ color: color, metalness: 0.1, roughness: 0.8 })
             );
             group.add(planet);
             group.userData = { distance, speed, angle: Math.random() * Math.PI * 2, radius };
             scene.add(group);
             planets.push(group);
         };
+        createPlanet(50, 0x2244ff, 700, 0.002); 
+        createPlanet(35, 0xff5500, 1000, 0.0015); 
+        createPlanet(60, 0x88cc88, 1400, 0.001); 
 
-        createPlanet(50, '#2244ff', 700, 0.002); 
-        createPlanet(35, '#ff5500', 1000, 0.0015); 
-        createPlanet(60, '#88cc88', 1400, 0.001); 
-
-        // --- Loading the Human Model ---
-        const ships = [];
+        // --- Human Loader ---
+        const humans = [];
         const loader = new GLTFLoader();
 
- 
- // Using './human1.glb' ensures it looks in the same folder as index.html
-loader.load('./human1.glb', (gltf) => {
-    console.log("Human model loaded successfully!");
-    const baseHuman = gltf.scene;
-    
-    // 1. INCREASE SCALE: GitHub models sometimes need a larger scale to be visible
-    baseHuman.scale.set(100, 100, 100); 
+        loader.load('./human1.glb', (gltf) => {
+            const baseModel = gltf.scene;
 
-    // 2. MATERIAL FIX: Ensure the model isn't just black
-    baseHuman.traverse((child) => {
-        if (child.isMesh) {
-            // This makes the human visible even if lighting is weak
-            child.material.emissive = new THREE.Color(0xffffff);
-            child.material.emissiveIntensity = 0.2;
-        }
-    });
+            // 1. MASSIVE SCALE FIX: 
+            // If they were invisible before, they were likely 1 unit tall. 
+            // Setting this to 100 makes them visible near the 50-radius planets.
+            baseModel.scale.set(100, 100, 100); 
 
-    for(let i=0; i<30; i++) {
-        const humanClone = baseHuman.clone();
-        const targetPlanet = planets[Math.floor(Math.random() * planets.length)];
-        
-        humanClone.userData = { 
-            targetPlanet: targetPlanet,
-            orbitAngle: Math.random() * Math.PI * 2,
-            orbitSpeed: 0.005 + Math.random() * 0.01,
-            // 3. DISTANCE: Place them slightly further from planets so they don't clip inside
-            orbitDistance: targetPlanet.userData.radius + 80, 
-        };
+            // 2. VISIBILITY FIX:
+            // This ensures the model isn't pitch black.
+            baseModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.emissive = new THREE.Color(0xffffff);
+                    child.material.emissiveIntensity = 0.3;
+                }
+            });
 
-        scene.add(humanClone);
-        ships.push(humanClone);
-    }
-}, 
-(xhr) => { 
-    // This will show progress in your F12 Console
-    console.log((xhr.loaded / xhr.total * 100) + '% loaded'); 
-},
-(error) => { 
-    console.error("Error loading model:", error); 
-});
+            for(let i=0; i<20; i++) {
+                const clone = baseModel.clone();
+                const targetPlanet = planets[Math.floor(Math.random() * planets.length)];
+                
+                clone.userData = { 
+                    targetPlanet: targetPlanet,
+                    orbitAngle: Math.random() * Math.PI * 2,
+                    orbitSpeed: 0.005 + Math.random() * 0.01,
+                    orbitDistance: targetPlanet.userData.radius + 150,
+                    yOffset: (Math.random() - 0.5) * 100
+                };
 
-        // --- Animation Loop ---
+                scene.add(clone);
+                humans.push(clone);
+            }
+            console.log("Humans added to scene:", humans.length);
+        });
+
         function animate() {
             requestAnimationFrame(animate);
 
@@ -141,21 +115,18 @@ loader.load('./human1.glb', (gltf) => {
                 p.rotation.y += 0.005;
             });
 
-            ships.forEach(human => {
-                const p = human.userData.targetPlanet;
-                human.userData.orbitAngle += human.userData.orbitSpeed;
+            humans.forEach(h => {
+                const p = h.userData.targetPlanet;
+                h.userData.orbitAngle += h.userData.orbitSpeed;
                 
-                // Calculate position around the planet
-                const x = p.position.x + Math.cos(human.userData.orbitAngle) * human.userData.orbitDistance;
-                const y = p.position.y + Math.sin(human.userData.orbitAngle * 0.5) * 30;
-                const z = p.position.z + Math.sin(human.userData.orbitAngle) * human.userData.orbitDistance;
+                h.position.set(
+                    p.position.x + Math.cos(h.userData.orbitAngle) * h.userData.orbitDistance,
+                    p.position.y + h.userData.yOffset,
+                    p.position.z + Math.sin(h.userData.orbitAngle) * h.userData.orbitDistance
+                );
                 
-                human.position.set(x, y, z);
-                
-                // Make the human look where they are going
-                human.lookAt(p.position);
-                // Adjust rotation so they aren't flying "sideways" (depends on your .glb orientation)
-                human.rotateY(Math.PI); 
+                h.lookAt(p.position);
+                h.rotateY(Math.PI); // Adjust this if they are flying backwards
             });
 
             controls.update();
