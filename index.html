@@ -64,9 +64,11 @@
         satLight.layers.set(1); 
         scene.add(satLight);
 
-        // --- LASER SETUP ---
-        const laserGeo = new THREE.CylinderGeometry(400, 400, 1, 8);
-        const laserMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0 });
+        // --- RED LASER SETUP ---
+        // Cylinder is created and then rotated internally so 'height' points forward (Z)
+        const laserGeo = new THREE.CylinderGeometry(500, 500, 1, 8);
+        laserGeo.rotateX(Math.PI / 2); 
+        const laserMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0 });
         const laser = new THREE.Mesh(laserGeo, laserMat);
         laser.layers.set(1);
         scene.add(laser);
@@ -136,18 +138,19 @@
             if (satelliteModel) {
                 satelliteModel.rotation.y += 0.003;
                 
-                // Laser Logic
                 laserTimer += delta;
-                if (laserTimer >= 3) {
-                    laserTimer = 0; // Reset every 3 seconds
-                }
+                if (laserTimer >= 3) laserTimer = 0;
 
-                if (laserTimer < 0.5) { // Fire for 0.5 seconds
+                if (laserTimer < 0.3) { 
                     laser.position.copy(satelliteModel.position);
-                    laser.rotation.copy(satelliteModel.rotation);
-                    laser.translateY(5000); // Shift to the "head" of the model
-                    laser.scale.y = 80000; // Shot length
-                    laser.material.opacity = 1.0 - (laserTimer * 2); // Fade out
+                    laser.quaternion.copy(satelliteModel.quaternion);
+                    
+                    // Offset laser so it starts from the 'nose'
+                    // If it shoots out the side, change .translateZ to .translateX or .translateY
+                    laser.translateZ(5000); 
+                    
+                    laser.scale.z = 200000; // Length of the red beam
+                    laser.material.opacity = 1.0 - (laserTimer * 3);
                 } else {
                     laser.material.opacity = 0;
                 }
