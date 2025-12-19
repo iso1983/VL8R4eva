@@ -40,7 +40,6 @@
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 100, 5000000);
         camera.position.set(0, 40000, 180000);
-        // Camera needs to see both Layer 0 (Planet) and Layer 1 (Satellite)
         camera.layers.enable(0);
         camera.layers.enable(1);
 
@@ -53,22 +52,24 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
-        // --- LIGHTING SETUP ---
-        
-        // 1. Global Ambient (Very low to keep planet dark)
-        const ambient = new THREE.AmbientLight(0xffffff, 0.2);
-        scene.add(ambient);
+        // --- LIGHTING ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.15));
 
-        // 2. Planet Point Light (Layer 0 only)
         const lavaLight = new THREE.PointLight(0xff4400, 50, 1000000, 1.2);
         lavaLight.layers.set(0); 
         scene.add(lavaLight);
 
-        // 3. Satellite Spotlight (Layer 1 only - won't touch the planet)
         const satLight = new THREE.DirectionalLight(0xffffff, 4);
         satLight.position.set(150000, 100000, 100000);
         satLight.layers.set(1); 
         scene.add(satLight);
+
+        // --- LASER SETUP ---
+        const laserGeo = new THREE.CylinderGeometry(400, 400, 1, 8);
+        const laserMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0 });
+        const laser = new THREE.Mesh(laserGeo, laserMat);
+        laser.layers.set(1);
+        scene.add(laser);
 
         // Starfield
         const starGeo = new THREE.BufferGeometry();
@@ -83,8 +84,8 @@
         
         let lavaPlanet, alienModel, satelliteModel;
         let alienOrbitAngle = 0;
+        let laserTimer = 0;
 
-        // Load Planet (Default Layer 0)
         loader.load('./lavaplanet.glb', (gltf) => {
             lavaPlanet = gltf.scene;
             lavaPlanet.scale.set(18000, 18000, 18000);
@@ -101,7 +102,6 @@
             mixers.push(mixer);
         });
 
-        // Load Alien (Default Layer 0)
         loader.load('./alien.glb', (gltf) => {
             alienModel = gltf.scene;
             alienModel.scale.set(8000, 8000, 8000);
@@ -111,17 +111,11 @@
             if (gltf.animations.length > 0) { mixer.clipAction(gltf.animations[0]).play(); mixers.push(mixer); }
         });
 
-        // Load Satellite (FORCE TO LAYER 1)
         loader.load('./satellite.glb', (gltf) => {
             satelliteModel = gltf.scene;
             satelliteModel.scale.set(8000, 8000, 8000);
             satelliteModel.position.set(110000, 25000, -60000);
-            
-            satelliteModel.traverse(child => {
-                if (child.isMesh) {
-                    child.layers.set(1); // Only looks at the Satellite Light
-                }
-            });
+            satelliteModel.traverse(child => { if (child.isMesh) child.layers.set(1); });
             scene.add(satelliteModel);
         });
 
@@ -139,7 +133,25 @@
                 alienModel.lookAt(0, 0, 0);
             }
 
-            if (satelliteModel) satelliteModel.rotation.y += 0.003;
+            if (satelliteModel) {
+                satelliteModel.rotation.y += 0.003;
+                
+                // Laser Logic
+                laserTimer += delta;
+                if (laserTimer >= 3) {
+                    laserTimer = 0; // Reset every 3 seconds
+                }
+
+                if (laserTimer < 0.5) { // Fire for 0.5 seconds
+                    laser.position.copy(satelliteModel.position);
+                    laser.rotation.copy(satelliteModel.rotation);
+                    laser.translateY(5000); // Shift to the "head" of the model
+                    laser.scale.y = 80000; // Shot length
+                    laser.material.opacity = 1.0 - (laserTimer * 2); // Fade out
+                } else {
+                    laser.material.opacity = 0;
+                }
+            }
             
             controls.update();
             renderer.render(scene, camera);
