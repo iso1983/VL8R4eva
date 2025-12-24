@@ -14,8 +14,7 @@
             left: 50%; 
             transform: translateX(-50%); 
             z-index: 2000; 
-            display: flex;
-            justify-content: center;
+            display: inline-block;
         }
         
         .profile-overlay { 
@@ -25,31 +24,41 @@
             border: 3px solid #ff4400; 
             box-shadow: 0 0 25px #ff4400; 
             object-fit: contain; 
-            position: relative;
-            cursor: crosshair;
+            display: block;
         }
 
-        /* LASER STYLES */
+        /* LASER LOGIC */
         .laser {
             position: absolute;
-            top: 35%; /* Adjust this to move lasers up/down to your eyes */
-            width: 4px;
+            top: 45%; /* Adjusted down to hit eyeballs */
+            width: 3px;
             height: 0;
-            background: rgba(255, 0, 0, 0.9);
-            box-shadow: 0 0 15px #ff0000, 0 0 5px #ffffff;
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
             z-index: 2001;
             opacity: 0;
-            transition: opacity 0.2s;
             pointer-events: none;
         }
 
-        .laser.left { left: 35%; }  /* Adjust this to align with left eye */
-        .laser.right { right: 35%; } /* Adjust this to align with right eye */
+        .laser.left { left: 38%; }  
+        .laser.right { right: 38%; } 
 
-        /* Trigger lasers on hover */
+        .laser::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 15px 5px #ff0000;
+        }
+
         .profile-container:hover .laser {
             opacity: 1;
-            animation: shoot-up 0.5s infinite alternate;
+            animation: shoot-up 0.1s infinite alternate;
         }
 
         @keyframes shoot-up {
@@ -91,7 +100,6 @@
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
         const scene = new THREE.Scene();
-        
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 500, 2000000);
         camera.position.set(0, 40000, 180000);
         camera.layers.enable(0);
