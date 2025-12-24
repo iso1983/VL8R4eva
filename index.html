@@ -27,7 +27,7 @@
             display: block;
         }
 
-        /* LASER POSITION FIX */
+        /* LASER POSITION */
         .laser {
             position: absolute;
             top: 42%; 
@@ -81,7 +81,7 @@
         <img src="https://raw.githubusercontent.com/iso1983/VL8R4eva/main/myface.png" class="profile-overlay">
     </div>
 
-    <audio id="laughSound" src="https://raw.githubusercontent.com/iso1983/VL8R4eva/main/Vl8rlaugh.mp3" preload="auto"></audio>
+    <audio id="laughSound" src="https://raw.githubusercontent.com/iso1983/VL8R4eva/main/vl8rlaugh.mp3" preload="auto"></audio>
 
     <div id="btc-window" class="window"><h3>Bitcoin Terminal</h3><div class="price">$96,420.00</div></div>
     <div id="eth-window" class="window"><h3>Ethereum Terminal</h3><div class="price">$3,512.45</div></div>
@@ -101,14 +101,13 @@
         import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
-        // --- AUDIO TRIGGER LOGIC FIXED ---
+        // --- AUDIO TRIGGER LOGIC ---
         const profile = document.getElementById('profile');
         const laughSound = document.getElementById('laughSound');
 
         profile.addEventListener('mouseenter', () => {
-            // Reset to beginning so it plays from the start every time you enter
             laughSound.currentTime = 0; 
-            laughSound.play().catch(e => console.log("User must interact with the page first"));
+            laughSound.play().catch(e => console.log("Interaction required"));
         });
 
         const scene = new THREE.Scene();
