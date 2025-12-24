@@ -30,7 +30,7 @@
         /* LASER POSITION FIX */
         .laser {
             position: absolute;
-            top: 42%; /* Lowered to match pupils */
+            top: 42%; 
             width: 3px;
             height: 0;
             background: #ff0000;
@@ -40,11 +40,9 @@
             pointer-events: none;
         }
 
-        /* Centered further inward to align with pupils */
         .laser.left { left: 32%; }  
         .laser.right { right: 29%; } 
 
-        /* The Red Dot (Eyeball Glow) */
         .laser::before {
             content: '';
             position: absolute;
@@ -77,11 +75,13 @@
 </head>
 <body>
 
-    <div class="profile-container">
+    <div class="profile-container" id="profile">
         <div class="laser left"></div>
         <div class="laser right"></div>
         <img src="https://raw.githubusercontent.com/iso1983/VL8R4eva/main/myface.png" class="profile-overlay">
     </div>
+
+    <audio id="laughSound" src="Vl8rlaugh.mp3" preload="auto"></audio>
 
     <div id="btc-window" class="window"><h3>Bitcoin Terminal</h3><div class="price">$96,420.00</div></div>
     <div id="eth-window" class="window"><h3>Ethereum Terminal</h3><div class="price">$3,512.45</div></div>
@@ -100,6 +100,16 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+
+        // --- AUDIO TRIGGER LOGIC FIXED ---
+        const profile = document.getElementById('profile');
+        const laughSound = document.getElementById('laughSound');
+
+        profile.addEventListener('mouseenter', () => {
+            // Reset to beginning so it plays from the start every time you enter
+            laughSound.currentTime = 0; 
+            laughSound.play().catch(e => console.log("User must interact with the page first"));
+        });
 
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 500, 2000000);
