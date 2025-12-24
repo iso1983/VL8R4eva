@@ -27,10 +27,10 @@
             display: block;
         }
 
-        /* LASER LOGIC */
+        /* LASER POSITION FIX */
         .laser {
             position: absolute;
-            top: 45%; /* Adjusted down to hit eyeballs */
+            top: 42%; /* Lowered to match pupils */
             width: 3px;
             height: 0;
             background: #ff0000;
@@ -40,17 +40,19 @@
             pointer-events: none;
         }
 
-        .laser.left { left: 38%; }  
-        .laser.right { right: 38%; } 
+        /* Centered further inward to align with pupils */
+        .laser.left { left: 41%; }  
+        .laser.right { right: 41%; } 
 
+        /* The Red Dot (Eyeball Glow) */
         .laser::before {
             content: '';
             position: absolute;
-            bottom: 0;
+            bottom: -4px;
             left: 50%;
             transform: translateX(-50%);
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             background: white;
             border-radius: 50%;
             box-shadow: 0 0 15px 5px #ff0000;
