@@ -161,8 +161,8 @@
         const mixers = [];
         const clock = new THREE.Clock();
         const loader = new GLTFLoader();
-        let lavaPlanet, rocketModel, satelliteModel;
-        let rocketOrbitAngle = 0;
+        let lavaPlanet, alienModel, satelliteModel;
+        let alienOrbitAngle = 0;
 
         loader.load('./lavaplanet.glb', (gltf) => {
             lavaPlanet = gltf.scene;
@@ -180,21 +180,19 @@
             mixers.push(mixer);
         });
 
-        // Replaced alien.glb with rocket.glb
-        loader.load('./rocket.glb', (gltf) => {
-            rocketModel = gltf.scene;
-            rocketModel.scale.set(8000, 8000, 8000);
-            rocketModel.traverse(c => { if(c.isMesh) c.layers.set(0); });
-            scene.add(rocketModel);
-            const mixer = new THREE.AnimationMixer(rocketModel);
+        loader.load('./alien.glb', (gltf) => {
+            alienModel = gltf.scene;
+            alienModel.scale.set(8000, 8000, 8000);
+            alienModel.traverse(c => { if(c.isMesh) c.layers.set(0); });
+            scene.add(alienModel);
+            const mixer = new THREE.AnimationMixer(alienModel);
             if (gltf.animations.length > 0) { mixer.clipAction(gltf.animations[0]).play(); mixers.push(mixer); }
         });
 
         loader.load('./satellite.glb', (gltf) => {
             satelliteModel = gltf.scene;
             satelliteModel.scale.set(8000, 8000, 8000);
-            // Shifted right and upwards (Previous was 110000, 25000, -60000)
-            satelliteModel.position.set(140000, 55000, -60000);
+            satelliteModel.position.set(110000, 25000, -60000);
             satelliteModel.traverse(child => { if (child.isMesh) child.layers.set(1); });
             scene.add(satelliteModel);
         });
@@ -204,15 +202,12 @@
             const delta = clock.getDelta();
             mixers.forEach(m => m.update(delta));
             if(lavaPlanet) lavaPlanet.rotation.y += 0.001;
-            
-            // Rocket Orbit logic
-            if (rocketModel) {
-                rocketOrbitAngle += 0.005;
-                rocketModel.position.x = Math.cos(rocketOrbitAngle) * 45000;
-                rocketModel.position.z = Math.sin(rocketOrbitAngle) * 45000;
-                rocketModel.lookAt(0, 0, 0);
+            if (alienModel) {
+                alienOrbitAngle += 0.005;
+                alienModel.position.x = Math.cos(alienOrbitAngle) * 45000;
+                alienModel.position.z = Math.sin(alienOrbitAngle) * 45000;
+                alienModel.lookAt(0, 0, 0);
             }
-            
             if (satelliteModel) satelliteModel.rotation.y += 0.003;
             controls.update();
             renderer.render(scene, camera);
